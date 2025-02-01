@@ -22,13 +22,13 @@ pip install -r requirements.txt
 1. Предобработка данных:
 
 ```bash
-python src/preprocess.py
+python -m src.preprocess
 ```
 
 2. Обучение модели:
 
 ```bash
-python src/train.py
+python -m src.train
 ```
 
 ## Структура проекта

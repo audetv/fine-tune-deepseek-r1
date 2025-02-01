@@ -1,7 +1,9 @@
-import os
+from src.preprocess import load_and_chunk_books, create_dataset, save_dataset
+from src.utils import get_device
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
 from datasets import load_from_disk
-from .preprocess import load_and_chunk_books, create_dataset, save_dataset
+import torch
+import os
 
 def tokenize_dataset(dataset, tokenizer, max_length: int = 512):
     """
@@ -15,6 +17,10 @@ def train_model(data_dir: str, output_dir: str, model_name: str = "deepseek-ai/d
     """
     Дообучает модель на данных из указанной директории.
     """
+    # Выбор устройства (CPU или GPU)
+    device = get_device()
+    print(f"Используемое устройство: {device}")
+
     # Загрузка данных
     dataset_path = os.path.join(data_dir, "dataset")
     if os.path.exists(dataset_path):
@@ -27,8 +33,8 @@ def train_model(data_dir: str, output_dir: str, model_name: str = "deepseek-ai/d
         save_dataset(dataset, data_dir)
 
     # Загрузка модели и токенизатора
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True).to(device)
 
     # Токенизация данных
     tokenized_dataset = tokenize_dataset(dataset, tokenizer)
@@ -44,7 +50,7 @@ def train_model(data_dir: str, output_dir: str, model_name: str = "deepseek-ai/d
         evaluation_strategy="steps",
         eval_steps=500,
         save_total_limit=2,
-        fp16=True,
+        fp16=torch.cuda.is_available(),  # Используем FP16, если доступен GPU
         gradient_accumulation_steps=4,
         warmup_steps=500,
         lr_scheduler_type="linear",
