@@ -1,8 +1,9 @@
+import os
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
-from datasets import Dataset
-from .preprocess import load_and_chunk_books, create_dataset
+from datasets import load_from_disk
+from .preprocess import load_and_chunk_books, create_dataset, save_dataset
 
-def tokenize_dataset(dataset: Dataset, tokenizer, max_length: int = 512) -> Dataset:
+def tokenize_dataset(dataset, tokenizer, max_length: int = 512):
     """
     Токенизирует датасет.
     """
@@ -15,8 +16,15 @@ def train_model(data_dir: str, output_dir: str, model_name: str = "deepseek-ai/d
     Дообучает модель на данных из указанной директории.
     """
     # Загрузка данных
-    texts = load_and_chunk_books(data_dir)
-    dataset = create_dataset(texts)
+    dataset_path = os.path.join(data_dir, "dataset")
+    if os.path.exists(dataset_path):
+        print("Загрузка предобработанного датасета...")
+        dataset = load_from_disk(dataset_path)
+    else:
+        print("Предобработанный датасет не найден. Создание нового...")
+        texts = load_and_chunk_books(os.path.join(data_dir, "books"))
+        dataset = create_dataset(texts)
+        save_dataset(dataset, data_dir)
 
     # Загрузка модели и токенизатора
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -63,6 +71,6 @@ def train_model(data_dir: str, output_dir: str, model_name: str = "deepseek-ai/d
     tokenizer.save_pretrained(output_dir)
 
 if __name__ == "__main__":
-    data_dir = "./data/books"
+    data_dir = "./data/processed"
     output_dir = "./models/fine-tuned-deepseek-r1"
     train_model(data_dir, output_dir)
