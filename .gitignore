@@ -1,2 +1,5 @@
 processed
 src/__pycache__
+logs
+models
+data
